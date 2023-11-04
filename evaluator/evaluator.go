@@ -13,9 +13,10 @@ var (
 )
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
+
 	switch node := node.(type) {
 	case *ast.Program:
-		return evalProgramStatements(node.Statements, env)
+		return evalProgramStatements(node, env)
 	case *ast.LetStatement:
 		val := Eval(node.Value, env)
 		if isError(val) {
@@ -62,6 +63,22 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		} else {
 			return NULL
 		}
+	case *ast.WhileExpression:
+		for {
+
+			condition := Eval(node.Condition, env)
+			if isError(condition) {
+				return condition
+			}
+			if !isTruthy(condition) {
+				break
+			}
+			eval := Eval(node.Body, env)
+			if isError(eval) {
+				return eval
+			}
+		}
+		return NULL
 	case *ast.ReturnStatement:
 		ret := Eval(node.ReturnValue, env)
 		if isError(ret) {
@@ -72,7 +89,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.Function{
 			Parameters: node.Parameters,
 			Body:       node.Body,
-			Env:        object.NewEnvironment(env),
+			Env:        env,
 		}
 	case *ast.CallExpression:
 		function := Eval(node.Function, env)
@@ -111,7 +128,6 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
-
 	if ident, ok := env.Get(node.Value); ok {
 		return ident
 	}
@@ -122,9 +138,9 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 	return newError("[line %v] identifier not found: %v", node.Token.Line, node.Value)
 }
 
-func evalProgramStatements(statements []ast.Statement, env *object.Environment) object.Object {
+func evalProgramStatements(program *ast.Program, env *object.Environment) object.Object {
 	var result object.Object
-	for _, stmt := range statements {
+	for _, stmt := range program.Statements {
 		result = Eval(stmt, env)
 
 		switch result := result.(type) {
@@ -141,14 +157,19 @@ func evalProgramStatements(statements []ast.Statement, env *object.Environment) 
 }
 func evalBlockStatements(statements []ast.Statement, env *object.Environment) object.Object {
 	var result object.Object
+
 	for _, stmt := range statements {
 		result = Eval(stmt, env)
-		if result != nil && result.Type() == object.RETURN_OBJ || result.Type() == object.ERROR_OBJ {
-			return result
+		if result != nil {
+			if result.Type() == object.RETURN_OBJ || result.Type() == object.ERROR_OBJ {
+				return result
+			}
 		}
 	}
 	return result
 }
+
+// func evalWhileExpression(condition, body object.Object, env *object.Environment)
 
 func evalExpressions(expressions []ast.Expression, env *object.Environment, line int) []object.Object {
 	var result []object.Object
@@ -165,10 +186,10 @@ func evalExpressions(expressions []ast.Expression, env *object.Environment, line
 func evalCall(fn object.Object, args []object.Object, line int) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
-		for i, param := range fn.Parameters {
-			fn.Env.Set(param.Value, args[i])
-		}
-		return Eval(fn.Body, fn.Env)
+
+		extendedEnv := extendFunctionEnv(fn, args)
+		eval := Eval(fn.Body, extendedEnv)
+		return unwrapReturnValue(eval)
 	case *object.Builtin:
 		evaluated := fn.Fn(args...)
 		if evaluated, ok := evaluated.(*object.Error); ok {
@@ -179,6 +200,27 @@ func evalCall(fn object.Object, args []object.Object, line int) object.Object {
 		return newError("[line %v] not a function: %s", line, fn.Type())
 	}
 
+}
+
+func extendFunctionEnv(
+	fn *object.Function,
+	args []object.Object,
+) *object.Environment {
+	env := object.NewEnvironment(fn.Env)
+
+	for paramIdx, param := range fn.Parameters {
+		env.Set(param.Value, args[paramIdx])
+	}
+
+	return env
+}
+
+func unwrapReturnValue(obj object.Object) object.Object {
+	if returnValue, ok := obj.(*object.ReturnValue); ok {
+		return returnValue.Value
+	}
+
+	return obj
 }
 
 func evalIndexExpression(left, index object.Object, line int) object.Object {
@@ -230,9 +272,7 @@ func evalHashIndexExpression(left, index object.Object, line int) object.Object 
 		return newError("[line %v] unusable as hash key: %s", line, index.Type())
 	}
 
-	fmt.Printf("left: %v, hashKey: %v %v\n", hash.Inspect(), hashKey, hashKey.HashKey())
 	val, ok := hash.Pairs[hashKey.HashKey()]
-	fmt.Printf("hash pairs: %v %v\n", val.Key, val.Value)
 	if !ok {
 		return NULL
 	}
@@ -266,6 +306,10 @@ func evalInfixExpression(op string, left, right object.Object, line int) object.
 		return nativeBoolToBooleanObject(left == right)
 	case op == "!=":
 		return nativeBoolToBooleanObject(left != right)
+	case op == "and":
+		return nativeBoolToBooleanObject(left.(*object.Boolean).Value && right.(*object.Boolean).Value)
+	case op == "or":
+		return nativeBoolToBooleanObject(left.(*object.Boolean).Value || right.(*object.Boolean).Value)
 	default:
 		return newError("[line %v] unknown operator: %s %s %s", line, left.Type(), op, right.Type())
 	}
@@ -306,8 +350,8 @@ func evalStringInfixExpression(op string, left, right object.Object, line int) o
 		str := fmt.Sprintf("%v%v", left.Inspect(), right.Inspect())
 		return &object.String{Value: str}
 	}
-	leftVal := left.(*object.String).Value
-	rightVal := right.(*object.String).Value
+	leftVal := left.Inspect()
+	rightVal := right.Inspect()
 	switch op {
 	case ">":
 		return nativeBoolToBooleanObject(leftVal > rightVal)
@@ -378,4 +422,13 @@ func isError(obj object.Object) bool {
 		return obj.Type() == object.ERROR_OBJ
 	}
 	return false
+}
+
+func isTruthy(val interface{}) bool {
+	if val == nil {
+		return false
+	} else if b, ok := val.(bool); ok {
+		return b
+	}
+	return true
 }

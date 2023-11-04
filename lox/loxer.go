@@ -68,7 +68,7 @@ func (l *Lox) Run(source string, env *object.Environment) {
 	if len(p.Errors()) != 0 {
 		return
 	}
-	// fmt.Println(program.String())
+
 	eval := evaluator.Eval(program, env)
 	if eval != nil {
 		fmt.Printf("%s\n", eval.Inspect())

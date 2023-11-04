@@ -10,6 +10,7 @@ import (
 const (
 	_ int = iota
 	LOWEST
+	AND         // and OR or
 	EQUALS      // ==
 	LESSGREATER // > OR <
 	SUM         // + OR -
@@ -20,6 +21,8 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
+	token.AND:          AND,
+	token.OR:           AND,
 	token.EQUAL_EQUAL:  EQUALS,
 	token.BANG_EQUAL:   EQUALS,
 	token.GREATER:      LESSGREATER,
@@ -63,6 +66,8 @@ func NewParser(tokens []*token.Token) *Parser {
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 	p.registerPrefix(token.LEFT_PAREN, p.parseGroupedExpressions)
 	p.registerPrefix(token.IF, p.parseIfExpression)
+	p.registerPrefix(token.WHILE, p.parseWhileExpression)
+	// p.registerPrefix(token.FOR, p.parseForExpression)
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.registerPrefix(token.LEFT_BRACKET, p.parseArrayLiteral)
 	p.registerPrefix(token.LEFT_BRACE, p.parseHashLiteral)
@@ -76,6 +81,8 @@ func NewParser(tokens []*token.Token) *Parser {
 	p.registerInfix(token.BANG_EQUAL, p.parseInfixExpression)
 	p.registerInfix(token.LESS, p.parseInfixExpression)
 	p.registerInfix(token.GREATER, p.parseInfixExpression)
+	p.registerInfix(token.AND, p.parseInfixExpression)
+	p.registerInfix(token.OR, p.parseInfixExpression)
 	p.registerInfix(token.LEFT_PAREN, p.parseCallExpression)
 	p.registerInfix(token.LEFT_BRACKET, p.parseIndexExpression)
 	return p
@@ -198,6 +205,24 @@ func (p *Parser) parseIfExpression() ast.Expression {
 		}
 		expression.Else = p.parseBlockStatement()
 	}
+	return expression
+}
+
+func (p *Parser) parseWhileExpression() ast.Expression {
+	expression := &ast.WhileExpression{Token: p.currToken}
+	if !p.expectPeek(token.LEFT_PAREN) {
+		return nil
+	}
+
+	p.nextToken()
+	expression.Condition = p.parseExpression(LOWEST)
+	if !p.expectPeek(token.RIGHT_PAREN) {
+		return nil
+	}
+	if !p.expectPeek(token.LEFT_BRACE) {
+		return nil
+	}
+	expression.Body = p.parseBlockStatement()
 	return expression
 }
 

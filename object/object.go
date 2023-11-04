@@ -92,7 +92,7 @@ func (e *Error) Inspect() string  { return "ERROR: " + e.Message }
 
 func NewEnvironment(e *Environment) *Environment {
 	s := make(map[string]Object)
-	return &Environment{s, e}
+	return &Environment{store: s, outer: e}
 }
 
 type Environment struct {

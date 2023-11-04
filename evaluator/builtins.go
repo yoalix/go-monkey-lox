@@ -3,10 +3,19 @@ package evaluator
 import (
 	"fmt"
 	"go-compiler/main/object"
+	"time"
 )
 
 var builtins = map[string]*object.Builtin{
-	"puts": {
+	"clock": {
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 0 {
+				return newError("wrong number of arguments. got=%d, want=0", len(args))
+			}
+			return &object.Number{Value: float64(time.Now().UnixMilli())}
+		},
+	},
+	"print": {
 		Fn: func(args ...object.Object) object.Object {
 			for _, arg := range args {
 				fmt.Printf("%v ", arg.Inspect())
@@ -17,6 +26,7 @@ var builtins = map[string]*object.Builtin{
 	},
 	"len": {
 		Fn: func(args ...object.Object) object.Object {
+			println("len")
 			if len(args) != 1 {
 				return newError("wrong number of arguments. got=%d, want=1", len(args))
 			}

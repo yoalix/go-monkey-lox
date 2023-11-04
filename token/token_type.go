@@ -58,7 +58,7 @@ const (
 
 var Keywords = map[string]TokenType{
 	"and":    AND,
-	"class":  CLASS,
+	"struct": STRUCT,
 	"else":   ELSE,
 	"false":  FALSE,
 	"for":    FOR,
@@ -66,7 +66,6 @@ var Keywords = map[string]TokenType{
 	"if":     IF,
 	"nil":    NIL,
 	"or":     OR,
-	"print":  PRINT,
 	"return": RETURN,
 	"super":  SUPER,
 	"this":   THIS,

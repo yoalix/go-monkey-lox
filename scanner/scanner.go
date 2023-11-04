@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"fmt"
 	"strconv"
 
 	"go-compiler/main/errors"
@@ -33,7 +32,6 @@ func (s *Scanner) ScanTokens() []*token.Token {
 
 func (s *Scanner) ScanToken() *token.Token {
 	c := s.advance()
-	fmt.Printf("c: %s\n", string(c))
 	switch c {
 	case '(':
 		s.addToken(token.LEFT_PAREN)
