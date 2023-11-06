@@ -39,3 +39,13 @@ let map = fn(arr, f) {
 let numbers = [1, 1 + 1, 4 - 1, 2 * 2, 2 + 3, 12 / 2];
 let fibmap = map(numbers, fib);
 print(fibmap)
+
+let testWhile = fn() {
+    let i = 0;
+    while (i < 10) {
+        print(i);
+        i = i + 1;
+    }
+};
+
+testWhile();

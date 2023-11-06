@@ -71,17 +71,37 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 	case *ast.WhileExpression:
 		for {
-
 			condition := Eval(node.Condition, env)
 			if isError(condition) {
 				return condition
 			}
 			if !isTruthy(condition) {
-				break
+				return NULL
 			}
 			eval := Eval(node.Body, env)
 			if isError(eval) {
 				return eval
+			}
+			if v, ok := eval.(*object.ReturnValue); ok {
+				if v.Value != nil {
+					/*
+						BUG: DO NOT RETURN 'v.Value', instead we should return 'v'.
+
+						If we return 'v.Value' then below code will print '5', not '6'(which is expected)
+						let add = fn(x,y){
+							let i = 0
+							while (i++ < 10) {
+								return x * y
+							}
+							return x + y
+						}
+						println(add(2,3))
+					*/
+
+					//return v.Value
+					return v
+				}
+				break
 			}
 		}
 		return NULL
@@ -430,11 +450,15 @@ func isError(obj object.Object) bool {
 	return false
 }
 
-func isTruthy(val interface{}) bool {
-	if val == nil {
+func isTruthy(val object.Object) bool {
+	switch val {
+	case NULL:
 		return false
-	} else if b, ok := val.(bool); ok {
-		return b
+	case TRUE:
+		return true
+	case FALSE:
+		return false
+	default:
+		return true
 	}
-	return true
 }

@@ -64,11 +64,12 @@ var Keywords = map[string]TokenType{
 	"for":    FOR,
 	"fn":     FUNCTION,
 	"if":     IF,
+	"let":    LET,
 	"nil":    NIL,
 	"or":     OR,
 	"return": RETURN,
 	"super":  SUPER,
 	"this":   THIS,
 	"true":   TRUE,
-	"let":    LET,
+	"while":  WHILE,
 }
