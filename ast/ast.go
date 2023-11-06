@@ -63,6 +63,22 @@ func (ls *LetStatement) String() string {
 	return out.String()
 }
 
+type AssignStatement struct {
+	Token    token.Token
+	Name     *Identifier
+	Value    Expression
+	EnvIndex int
+	EnvDepth int
+}
+
+func (as *AssignStatement) expressionNode()      {}
+func (as *AssignStatement) TokenLiteral() string { return as.Token.Lexeme }
+func (as *AssignStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString("(" + as.Name.Value + " = " + as.Value.String() + ")")
+	return out.String()
+}
+
 type Identifier struct {
 	Token *token.Token // token.IDENTIFIER
 	Value string

@@ -90,29 +90,6 @@ type Error struct {
 func (e *Error) Type() ObjectType { return ERROR_OBJ }
 func (e *Error) Inspect() string  { return "ERROR: " + e.Message }
 
-func NewEnvironment(e *Environment) *Environment {
-	s := make(map[string]Object)
-	return &Environment{store: s, outer: e}
-}
-
-type Environment struct {
-	store map[string]Object
-	outer *Environment
-}
-
-func (e *Environment) Get(name string) (Object, bool) {
-	obj, ok := e.store[name]
-	if !ok && e.outer != nil {
-		return e.outer.Get(name)
-	}
-	return obj, ok
-}
-
-func (e *Environment) Set(name string, obj Object) Object {
-	e.store[name] = obj
-	return obj
-}
-
 type BuiltinFunction func(args ...Object) Object
 
 type Builtin struct {

@@ -10,6 +10,7 @@ import (
 const (
 	_ int = iota
 	LOWEST
+	ASSIGN
 	AND         // and OR or
 	EQUALS      // ==
 	LESSGREATER // > OR <
@@ -21,6 +22,7 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
+	token.EQUAL:        ASSIGN,
 	token.AND:          AND,
 	token.OR:           AND,
 	token.EQUAL_EQUAL:  EQUALS,
@@ -85,6 +87,7 @@ func NewParser(tokens []*token.Token) *Parser {
 	p.registerInfix(token.OR, p.parseInfixExpression)
 	p.registerInfix(token.LEFT_PAREN, p.parseCallExpression)
 	p.registerInfix(token.LEFT_BRACKET, p.parseIndexExpression)
+	p.registerInfix(token.EQUAL, p.parseAssignExpression)
 	return p
 }
 
@@ -115,6 +118,7 @@ func (p *Parser) Parse() *ast.Program {
 }
 
 func (p *Parser) parseStatement() ast.Statement {
+
 	switch p.currToken.Type {
 	case token.LET:
 		return p.parseLetStatement()
@@ -348,6 +352,18 @@ func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
 	if !p.expectPeek(token.RIGHT_BRACKET) {
 		return nil
 	}
+	return expression
+}
+
+func (p *Parser) parseAssignExpression(left ast.Expression) ast.Expression {
+	expression := &ast.AssignStatement{Token: *p.currToken}
+	p.nextToken()
+	identifier, ok := left.(*ast.Identifier)
+	if !ok {
+		return nil
+	}
+	expression.Name = identifier
+	expression.Value = p.parseExpression(LOWEST)
 	return expression
 }
 

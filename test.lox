@@ -1,3 +1,15 @@
+let count = fn() {
+    let i = 0;
+    return fn() {
+        i = i + 1;
+        return i;
+    };
+};
+
+let counter = count();
+print(counter()); // 1
+print(counter()); // 2
+
 let fib = fn(n) {
   if (n < 2) {
     return n;
